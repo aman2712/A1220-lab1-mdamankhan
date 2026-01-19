@@ -5,6 +5,39 @@ from openai import OpenAI
 CATEGORIES = ["Meals", "Transport", "Lodging", "Office Supplies", 
 "Entertainment", "Other"]
 
+def normalize_amount_field(data):
+    """Normalize the amount field to a float without a dollar symbol.
+
+    Args:
+        data: A dict containing receipt fields, including the amount key.
+
+    Returns:
+        The same dict with the amount converted to float when possible.
+
+    Assumptions:
+        The amount is either numeric, a numeric string, or a numeric string
+        prefixed with "$".
+    """
+    if not isinstance(data, dict):
+        return data
+
+    amount = data.get("amount")
+    if amount is None:
+        return data
+
+    if isinstance(amount, (int, float)):
+        data["amount"] = float(amount)
+        return data
+
+    if isinstance(amount, str):
+        cleaned = amount.replace("$", "").strip()
+        try:
+            data["amount"] = float(cleaned)
+        except ValueError:
+            pass
+
+    return data
+
 def extract_receipt_info(image_b64):
     """Extract receipt fields from a base64-encoded image via OpenAI.
     Args:
@@ -49,4 +82,5 @@ The output must be valid JSON.
             }
         ]
     )
-    return json.loads(response.choices[0].message.content)
+    data = json.loads(response.choices[0].message.content)
+    return normalize_amount_field(data)
